@@ -1,0 +1,124 @@
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(100) NOT NULL,
+  email VARCHAR(120) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  role ENUM('buyer','seller','admin') NOT NULL DEFAULT 'buyer',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  seller_id INT NOT NULL,
+  title VARCHAR(140) NOT NULL,
+  category VARCHAR(60) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  description TEXT,
+  image VARCHAR(255) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+
+INSERT INTO products (seller_id, title, category, price, description)
+VALUES
+(1, 'Smart Watch', 'Electronics', 2500, 'Clean condition, box included.'),
+(1, 'Used Laptop', 'Computers', 28000, 'Good for study and coding.'),
+(1, 'Bluetooth Speaker', 'Audio', 1800, 'Strong bass, rechargeable.'),
+(1, 'Programming Book', 'Books', 450, 'Great for beginners.');
+
+
+CREATE TABLE orders (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  total DECIMAL(10,2) NOT NULL DEFAULT 0,
+  status ENUM('pending','confirmed','cancelled') NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE order_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  product_id INT NOT NULL,
+  title VARCHAR(140) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  qty INT NOT NULL,
+  line_total DECIMAL(10,2) NOT NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+
+ALTER TABLE orders
+ADD address TEXT NOT NULL,
+ADD phone VARCHAR(20) NOT NULL;
+
+
+UPDATE users SET role='admin' WHERE email='YOUR_ADMIN_EMAIL_HERE';
+
+
+
+ALTER TABLE products ADD COLUMN is_approved TINYINT(1) NOT NULL DEFAULT 1;
+UPDATE products SET is_approved = 1;
+
+
+CREATE TABLE password_resets (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token_hash VARCHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX (user_id),
+  INDEX (token_hash),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+ALTER TABLE orders
+ADD COLUMN payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid',
+ADD COLUMN payment_method VARCHAR(30) NULL,
+ADD COLUMN payment_ref VARCHAR(100) NULL,
+ADD COLUMN paid_at DATETIME NULL;
+
+CREATE TABLE payments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  user_id INT NOT NULL,
+  method VARCHAR(30) NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+  status VARCHAR(20) NOT NULL DEFAULT 'initiated',
+  gateway_ref VARCHAR(120) NULL,
+  gateway_payload MEDIUMTEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NULL,
+  INDEX(order_id),
+  CONSTRAINT fk_pay_order FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  user_id INT NOT NULL,
+  method VARCHAR(30) NOT NULL DEFAULT 'sslcommerz',
+  amount DECIMAL(10,2) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'initiated',
+  gateway_ref VARCHAR(120) NULL,
+  gateway_payload MEDIUMTEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NULL,
+  INDEX(order_id),
+  INDEX(user_id)
+);
+
+
+ALTER TABLE payments
+  ADD COLUMN tran_id VARCHAR(64) NULL AFTER status,
+  ADD COLUMN val_id  VARCHAR(64) NULL AFTER tran_id;
+
+
+ALTER TABLE products ADD size VARCHAR(20) NULL;
+
+ALTER TABLE orders ADD product_id INT NOT NULL;
+
